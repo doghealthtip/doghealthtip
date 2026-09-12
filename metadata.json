@@ -1,0 +1,7 @@
+{
+  "name": "Canine Vitality & Care Hub",
+  "description": "An authoritative veterinary wellness and canine vitality platform blending clinical rigor with warm, holistic care.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
