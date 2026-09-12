@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { EditorialArticle } from '../types';
 import { extractHeadingsAndInjectIds } from '../utils/tocGenerator';
 import { TableOfContents } from './TableOfContents';
+import { apiService } from '../services/apiService';
 import {
   Plus,
   Edit3,
@@ -232,33 +233,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     };
 
     try {
-      let res;
-      if (editingPost) {
-        res = await fetch(`/api/admin/posts/${editingPost.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(postPayload),
-        });
-      } else {
-        res = await fetch('/api/admin/posts', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(postPayload),
-        });
+      const result = await apiService.saveArticle(postPayload, token, editingPost?.id);
+
+      if (!result.success || !result.post) {
+        throw new Error(result.error || 'Failed to save article.');
       }
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to save post on server');
-      }
-
-      const savedData = await res.json();
       showNotification(`Article successfully ${finalStatus === 'published' ? 'published' : 'saved as draft'}!`, 'success');
       onRefreshPosts();
       setActiveView('list');
@@ -276,15 +256,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
 
     try {
-      const res = await fetch(`/api/admin/posts/${id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const result = await apiService.deleteArticle(id, token);
 
-      if (!res.ok) {
-        throw new Error('Failed to delete post');
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete article');
       }
 
       showNotification('Article deleted successfully', 'success');

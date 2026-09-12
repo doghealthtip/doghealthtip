@@ -28,6 +28,7 @@ import { AdminLoginModal } from './components/AdminLoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { CompanionModal } from './components/CompanionModal';
 import { Footer } from './components/Footer';
+import { apiService } from './services/apiService';
 
 export default function App() {
   // State: Dogs
@@ -52,27 +53,19 @@ export default function App() {
   // State: Navigation (default to 'blog' for content-first canine blog experience)
   const [currentTab, setCurrentTab] = useState<string>('blog');
 
-  // Load articles from backend API
+  // Load articles from backend API with fallback to local storage
   const fetchArticles = async () => {
     try {
-      const headers: Record<string, string> = {};
-      if (adminToken) {
-        headers['Authorization'] = `Bearer ${adminToken}`;
-      }
-      const res = await fetch('/api/posts', { headers });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setArticles(data);
-          // If a post was selected, update its reference
-          if (selectedBlogPost) {
-            const updated = data.find((p) => p.id === selectedBlogPost.id || p.slug === selectedBlogPost.slug);
-            if (updated) setSelectedBlogPost(updated);
-          }
+      const data = await apiService.getArticles(adminToken);
+      if (Array.isArray(data) && data.length > 0) {
+        setArticles(data);
+        // If a post was selected, update its reference
+        if (selectedBlogPost) {
+          const updated = data.find((p) => p.id === selectedBlogPost.id || p.slug === selectedBlogPost.slug);
+          if (updated) setSelectedBlogPost(updated);
         }
       }
     } catch (err) {
-      // Backend not yet ready or offline; fallback to initial mock data
       console.log('Posts fetched from local dataset:', err);
     }
   };
@@ -84,22 +77,17 @@ export default function App() {
   // Check stored admin token on mount
   useEffect(() => {
     if (adminToken) {
-      fetch('/api/admin/verify', {
-        headers: { Authorization: `Bearer ${adminToken}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.authenticated && data.user) {
-            setAdminUser(data.user);
-          } else {
-            sessionStorage.removeItem('canine_admin_token');
-            setAdminToken(null);
-            setAdminUser(null);
-          }
-        })
-        .catch(() => {
-          // Token verification failed or offline
-        });
+      apiService.verifyAdminSession(adminToken).then((res) => {
+        if (res.authenticated && res.user) {
+          setAdminUser(res.user);
+        } else {
+          sessionStorage.removeItem('canine_admin_token');
+          setAdminToken(null);
+          setAdminUser(null);
+        }
+      }).catch(() => {
+        // Verification offline
+      });
     }
   }, []);
 
@@ -152,13 +140,7 @@ export default function App() {
   };
 
   const handleAdminLogout = () => {
-    if (adminToken) {
-      fetch('/api/admin/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${adminToken}` },
-      }).catch(() => {});
-    }
-    sessionStorage.removeItem('canine_admin_token');
+    apiService.logoutAdmin(adminToken || undefined);
     setAdminToken(null);
     setAdminUser(null);
     setCurrentTab('blog');
