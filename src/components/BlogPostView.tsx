@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { EditorialArticle } from '../types';
 import { TableOfContents } from './TableOfContents';
 import { extractHeadingsAndInjectIds } from '../utils/tocGenerator';
+import { ReadingProgressBar } from './ReadingProgressBar';
+import { SocialShareBar } from './SocialShareBar';
+import { RelatedPosts } from './RelatedPosts';
 import {
   ArrowLeft,
   Calendar,
   Clock,
   Award,
-  Share2,
-  Check,
   ExternalLink,
   BookOpen,
   ChevronRight,
@@ -31,7 +32,6 @@ export const BlogPostView: React.FC<BlogPostViewProps> = ({
   onSelectPost,
   onNavigateTab,
 }) => {
-  const [copied, setCopied] = useState(false);
 
   // SEO: Update page title and meta description when post opens
   useEffect(() => {
@@ -103,19 +103,11 @@ export const BlogPostView: React.FC<BlogPostViewProps> = ({
   // Extract headings and inject anchor IDs for automatic Table of Contents
   const { processedHtml, headings } = extractHeadingsAndInjectIds(rawContent);
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  // Find related articles in the same or adjacent categories
-  const relatedPosts = allPosts
-    .filter((p) => p.id !== post.id && p.status !== 'draft')
-    .slice(0, 3);
-
   return (
-    <div className="min-h-screen bg-[#FDFBF7] text-[#1c1c16] pb-20">
+    <div className="min-h-screen bg-[#FDFBF7] text-[#1c1c16] pb-20 relative">
+      {/* Scroll-Based Reading Progress Bar */}
+      <ReadingProgressBar title={post.title} readTimeMinutes={post.readTimeMinutes} />
+
       {/* Top Breadcrumbs & Back Navigation */}
       <div className="bg-[#FAF6EC] border-b border-[#E8E0D3]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-4">
@@ -197,7 +189,7 @@ export const BlogPostView: React.FC<BlogPostViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-[#718C5C]">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-[#718C5C]">
               <div className="flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>{post.publishDate}</span>
@@ -206,15 +198,15 @@ export const BlogPostView: React.FC<BlogPostViewProps> = ({
                 <Clock className="w-3.5 h-3.5" />
                 <span>{post.readTimeMinutes} min read</span>
               </div>
-              <button
-                type="button"
-                onClick={handleShare}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[#24451F] bg-[#FAF6EC] border border-[#E8E0D3] hover:bg-[#CEECB4]/30 px-2.5 py-1 rounded-md transition-colors"
-                title="Copy article URL"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-[#315B2B]" /> : <Share2 className="w-3.5 h-3.5" />}
-                <span>{copied ? 'Copied' : 'Share'}</span>
-              </button>
+
+              {/* Social Media Sharing Buttons (Header Compact) */}
+              <div className="pl-1 sm:border-l sm:border-[#E8E0D3]">
+                <SocialShareBar
+                  title={post.title}
+                  summary={post.summary}
+                  variant="compact"
+                />
+              </div>
             </div>
           </div>
         </header>
@@ -287,8 +279,17 @@ export const BlogPostView: React.FC<BlogPostViewProps> = ({
           </div>
         )}
 
+        {/* Social Media Sharing Call-To-Action (Expanded) */}
+        <div className="mt-10">
+          <SocialShareBar
+            title={post.title}
+            summary={post.summary}
+            variant="expanded"
+          />
+        </div>
+
         {/* Veterinary Reviewer Assurance Card */}
-        <section className="mt-10 p-6 bg-white border border-[#E8E0D3] rounded-2xl shadow-xs">
+        <section className="mt-8 p-6 bg-white border border-[#E8E0D3] rounded-2xl shadow-xs">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <img
@@ -309,63 +310,20 @@ export const BlogPostView: React.FC<BlogPostViewProps> = ({
             <button
               type="button"
               onClick={onBackToBlog}
-              className="px-4 py-2 bg-[#FAF6EC] hover:bg-[#CEECB4]/30 text-[#24451F] text-xs font-bold rounded-xl border border-[#E8E0D3] transition-colors shrink-0"
+              className="px-4 py-2 bg-[#FAF6EC] hover:bg-[#CEECB4]/30 text-[#24451F] text-xs font-bold rounded-xl border border-[#E8E0D3] transition-colors shrink-0 cursor-pointer"
             >
               Explore More Studies
             </button>
           </div>
         </section>
 
-        {/* Related Articles Section */}
-        {relatedPosts.length > 0 && (
-          <section className="mt-14 pt-10 border-t border-[#E8E0D3]">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-serif text-2xl font-bold text-[#1c1c16]">
-                Related Peer-Reviewed Research
-              </h2>
-              <button
-                type="button"
-                onClick={onBackToBlog}
-                className="text-xs font-bold text-[#315B2B] hover:underline flex items-center gap-1"
-              >
-                View all articles
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedPosts.map((related) => (
-                <div
-                  key={related.id}
-                  onClick={() => onSelectPost(related)}
-                  className="group bg-white rounded-xl border border-[#E8E0D3] overflow-hidden shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col"
-                >
-                  <div className="h-40 overflow-hidden bg-[#FAF6EC]">
-                    <img
-                      src={related.heroImage}
-                      alt={related.heroImageAlt || related.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#315B2B] bg-[#FAF6EC] px-2 py-0.5 rounded">
-                        {related.category}
-                      </span>
-                      <h3 className="font-serif text-sm font-bold text-[#1c1c16] mt-2 group-hover:text-[#315B2B] transition-colors line-clamp-2">
-                        {related.title}
-                      </h3>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-[#718C5C] mt-4 pt-3 border-t border-[#E8E0D3]">
-                      <span>{related.authorVet}</span>
-                      <span>{related.readTimeMinutes} min</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Dynamic Category & Tag-based Related Posts Component */}
+        <RelatedPosts
+          currentPost={post}
+          allPosts={allPosts}
+          onSelectPost={onSelectPost}
+          onViewAll={onBackToBlog}
+        />
       </article>
     </div>
   );
